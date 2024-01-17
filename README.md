@@ -13,7 +13,7 @@ We recommend installing the Pro version from [CodeRabbit](http://coderabbit.ai).
 ## Overview
 
 CodeRabbit `ai-pr-reviewer` is an AI-based code reviewer and summarizer for
-GitHub pull requests using OpenAI's `gpt-3.5-turbo` and `gpt-4` models. It is
+GitHub pull requests using OpenAI compatible APIs like MistralAI API. It is
 designed to be used as a GitHub Action and can be configured to run on every
 pull request and review comments
 
@@ -29,10 +29,6 @@ pull request and review comments
 - **Cost-effective and reduced noise**: Incremental reviews save on OpenAI costs
   and reduce noise by tracking changed files between commits and the base of the
   pull request.
-- **"Light" model for summary**: Designed to be used with a "light"
-  summarization model (e.g. `gpt-3.5-turbo`) and a "heavy" review model (e.g.
-  `gpt-4`). _For best results, use `gpt-4` as the "heavy" model, as thorough
-  code review needs strong reasoning abilities._
 - **Chat with bot**: Supports conversation with the bot in the context of lines
   of code or entire files, useful for providing context, generating test cases,
   and reducing code complexity.
@@ -45,8 +41,16 @@ pull request and review comments
   process or even change the review objective.
 
 To use this tool, you need to add the provided YAML file to your repository and
-configure the required environment variables, such as `GITHUB_TOKEN` and
-`OPENAI_API_KEY`. For more information on usage, examples, contributing, and
+configure the required environment variables, such as `GITHUB_TOKEN`, 
+the openai compatible API key `OPENAI_API_KEY`, the base url of the API `openai_base_url`,
+the light model `openai_light_model` and the heavy model `openai_heavy_model`.
+By default it assume you will use OPENAI so no need to specify `openai_base_url`, 
+`openai_light_model` and `openai_heavy_model` unless you want to use something else
+like Mistral where you should specify those values:
+
+```yaml
+
+For more information on usage, examples, contributing, and
 FAQs, you can refer to the sections below.
 
 - [Overview](#overview)
@@ -64,6 +68,8 @@ FAQs, you can refer to the sections below.
 `ai-pr-reviewer` runs as a GitHub Action. Add the below file to your repository
 at `.github/workflows/ai-pr-reviewer.yml`
 
+### If you want to use OpenAI
+
 ```yaml
 name: Code Review
 
@@ -72,7 +78,8 @@ permissions:
   pull-requests: write
 
 on:
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
   pull_request_review_comment:
     types: [created]
 
@@ -87,30 +94,78 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: coderabbitai/ai-pr-reviewer@latest
+      - uses: Onigam/ai-mistral-pr-reviewer@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           debug: false
-          review_simple_changes: false
-          review_comment_lgtm: false
+          review_simple_changes: true
+          review_comment_lgtm: true
+```
+
+### If you prefer MistralAI 
+
+```yaml
+name: Code Review
+
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref ||
+    github.sha }}-${{ github.workflow }}-${{ github.event_name ==
+    'pull_request_review_comment' && 'pr_comment' || 'pr' }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request_review_comment' }}
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: AI-based PR Reviewer & Summarizer with Mistral 8x7B Chat Capabilities
+        uses: Onigam/ai-mistral-pr-reviewer@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        with:
+          debug: false
+          review_simple_changes: true
+          review_comment_lgtm: true
+          openai_base_url: "https://api.mistral.ai/v1"
+          openai_light_model: "mistral-tiny"
+          openai_heavy_model: "mistral-small"
+
 ```
 
 #### Environment variables
 
 - `GITHUB_TOKEN`: This should already be available to the GitHub Action
   environment. This is used to add comments to the pull request.
-- `OPENAI_API_KEY`: use this to authenticate with OpenAI API. You can get one
-  [here](https://platform.openai.com/account/api-keys). Please add this key to
+- `OPENAI_API_KEY`: use this to authenticate with OpenAI API or OpenAI compatible API like Mistral. You can get one
+  [here](https://platform.openai.com/account/api-keys) or a Mistral one [here](https://console.mistral.ai/user/api-keys/). Please add this key to
   your GitHub Action secrets.
 - `OPENAI_API_ORG`: (optional) use this to use the specified organization with
   OpenAI API if you have multiple. Please add this key to your GitHub Action
   secrets.
+- `openai_base_url`: (optional) use this to specify the base url of the OpenAI compatible API. Default is https://api.openai.com/v1
+- `openai_light_model`: (optional) use this to specify the light model to use. Default is `gpt-3.5-turbo`
+- `openai_heavy_model`: (optional) use this to specify the heavy model to use. Default is `gpt-4`
 
-### Models: `gpt-4` and `gpt-3.5-turbo`
+### Models: `gpt-4` and `gpt-3.5-turbo`, or `mistral-small` and `mistral-tiny`
 
-Recommend using `gpt-3.5-turbo` for lighter tasks such as summarizing the
+Recommend using `mistral-tiny` or `mistral-small` for lighter tasks such as summarizing the
+changes (`openai_light_model` in configuration) and `mistral-small` or `mistral-medium` for more complex
+
+Cost are really cheaper than OpenAI and the results quite similar.
+
+If you want to use openai we recommend using `gpt-3.5-turbo` for lighter tasks such as summarizing the
 changes (`openai_light_model` in configuration) and `gpt-4` for more complex
 review and commenting tasks (`openai_heavy_model` in configuration).
 
