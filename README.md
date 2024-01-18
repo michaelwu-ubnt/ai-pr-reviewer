@@ -41,7 +41,6 @@ By default it assume you will use OPENAI so no need to specify `openai_base_url`
 `openai_light_model` and `openai_heavy_model` unless you want to use something else
 like Mistral where you should specify those values:
 
-```yaml
 
 For more information on usage, examples, contributing, and
 FAQs, you can refer to the sections below.
@@ -93,8 +92,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           debug: false
-          review_simple_changes: true
-          review_comment_lgtm: true
 ```
 
 ### If you prefer MistralAI 
@@ -129,8 +126,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
         with:
           debug: false
-          review_simple_changes: true
-          review_comment_lgtm: true
           openai_base_url: "https://api.mistral.ai/v1"
           openai_light_model: "mistral-tiny"
           openai_heavy_model: "mistral-small"
@@ -301,8 +296,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           debug: false
-          review_simple_changes: false
-          review_comment_lgtm: false
 ```
 
 See also:
@@ -315,11 +308,9 @@ messages
 
 ### Disclaimer
 
-- Your code (files, diff, PR title/description) will be sent to OpenAI's servers
-  for processing. Please check with your compliance team before using this on
+- Your code (files, diff, PR title/description) will be sent to your AI API's servers
+  for processing. Please check with your privacy policy before using this on
   your private code repositories.
-- OpenAI's API is used instead of ChatGPT session on their portal. OpenAI API
-  has a
-  [more conservative data usage policy](https://openai.com/policies/api-data-usage-policies)
-  compared to their ChatGPT offering.
-- This action is not affiliated with OpenAI.
+- Regarding which API you are using check OpenAI API [specific data usage policy](https://openai.com/policies/api-data-usage-policies)
+  or MistralAI API [specific data usage policy](https://mistral.ai/privacy-policy/).
+- This action is not affiliated with OpenAI or Mistral AI.
