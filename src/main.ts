@@ -1,3 +1,13 @@
+/**
+ * Entry point of the application.
+ * This function is responsible for running the code review process based on the provided options and prompts.
+ * It creates two instances of the Bot class, one for summary and one for review.
+ * It checks the event type and performs the appropriate action based on the event.
+ * If the event is a pull request, it calls the codeReview function.
+ * If the event is a pull request review comment, it calls the handleReviewComment function.
+ * If the event is neither a pull request nor a pull request review comment, it logs a warning message.
+ * If any error occurs during the process, it sets the action as failed and logs the error message.
+ */
 import {
   getBooleanInput,
   getInput,

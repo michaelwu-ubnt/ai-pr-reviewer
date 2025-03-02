@@ -1,19 +1,12 @@
-# CodeRabbit Pro
-
-This is an old version of [CodeRabbit](http://coderabbit.ai) and is now in the maintenance mode.
-We recommend installing the Pro version from [CodeRabbit](http://coderabbit.ai). The Pro version is a total redesign and offers significantly better reviews that learn from your usage and improve over time. CodeRabbit Pro is free for open source projects. 
-
-[![Discord](https://img.shields.io/badge/Join%20us%20on-Discord-blue?logo=discord&style=flat-square)](https://discord.gg/GsXnASn26c)
-
 # AI-based PR reviewer and summarizer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub](https://img.shields.io/github/last-commit/coderabbitai/ai-pr-reviewer/main?style=flat-square)](https://github.com/coderabbitai/ai-pr-reviewer/commits/main)
+[![GitHub](https://img.shields.io/github/last-commit/Onigam/ai-mistral-pr-reviewer/main?style=flat-square)](https://github.com/Onigam/ai-mistral-pr-reviewer/commits/main)
 
 ## Overview
 
-CodeRabbit `ai-pr-reviewer` is an AI-based code reviewer and summarizer for
-GitHub pull requests using OpenAI's `gpt-3.5-turbo` and `gpt-4` models. It is
+CodeRabbit's fork `ai-mistral-pr-reviewer` is an AI-based code reviewer and summarizer for
+GitHub pull requests using OpenAI compatible APIs like MistralAI API. It is
 designed to be used as a GitHub Action and can be configured to run on every
 pull request and review comments
 
@@ -29,10 +22,6 @@ pull request and review comments
 - **Cost-effective and reduced noise**: Incremental reviews save on OpenAI costs
   and reduce noise by tracking changed files between commits and the base of the
   pull request.
-- **"Light" model for summary**: Designed to be used with a "light"
-  summarization model (e.g. `gpt-3.5-turbo`) and a "heavy" review model (e.g.
-  `gpt-4`). _For best results, use `gpt-4` as the "heavy" model, as thorough
-  code review needs strong reasoning abilities._
 - **Chat with bot**: Supports conversation with the bot in the context of lines
   of code or entire files, useful for providing context, generating test cases,
   and reducing code complexity.
@@ -45,8 +34,15 @@ pull request and review comments
   process or even change the review objective.
 
 To use this tool, you need to add the provided YAML file to your repository and
-configure the required environment variables, such as `GITHUB_TOKEN` and
-`OPENAI_API_KEY`. For more information on usage, examples, contributing, and
+configure the required environment variables, such as `GITHUB_TOKEN`, 
+the openai compatible API key `OPENAI_API_KEY`, the base url of the API `openai_base_url`,
+the light model `openai_light_model` and the heavy model `openai_heavy_model`.
+By default it assume you will use OPENAI so no need to specify `openai_base_url`, 
+`openai_light_model` and `openai_heavy_model` unless you want to use something else
+like Mistral where you should specify those values:
+
+
+For more information on usage, examples, contributing, and
 FAQs, you can refer to the sections below.
 
 - [Overview](#overview)
@@ -64,6 +60,8 @@ FAQs, you can refer to the sections below.
 `ai-pr-reviewer` runs as a GitHub Action. Add the below file to your repository
 at `.github/workflows/ai-pr-reviewer.yml`
 
+### If you want to use OpenAI
+
 ```yaml
 name: Code Review
 
@@ -72,7 +70,8 @@ permissions:
   pull-requests: write
 
 on:
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
   pull_request_review_comment:
     types: [created]
 
@@ -87,30 +86,74 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: coderabbitai/ai-pr-reviewer@latest
+      - uses: Onigam/ai-mistral-pr-reviewer@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           debug: false
-          review_simple_changes: false
-          review_comment_lgtm: false
+```
+
+### If you prefer MistralAI 
+
+```yaml
+name: Code Review
+
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref ||
+    github.sha }}-${{ github.workflow }}-${{ github.event_name ==
+    'pull_request_review_comment' && 'pr_comment' || 'pr' }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request_review_comment' }}
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: AI-based PR Reviewer & Summarizer with Mistral 8x7B Chat Capabilities
+        uses: Onigam/ai-mistral-pr-reviewer@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        with:
+          debug: false
+          openai_base_url: "https://api.mistral.ai/v1"
+          openai_light_model: "mistral-tiny"
+          openai_heavy_model: "mistral-small"
+
 ```
 
 #### Environment variables
 
 - `GITHUB_TOKEN`: This should already be available to the GitHub Action
   environment. This is used to add comments to the pull request.
-- `OPENAI_API_KEY`: use this to authenticate with OpenAI API. You can get one
-  [here](https://platform.openai.com/account/api-keys). Please add this key to
+- `OPENAI_API_KEY`: use this to authenticate with OpenAI API or OpenAI compatible API like Mistral. You can get one
+  [here](https://platform.openai.com/account/api-keys) or a Mistral one [here](https://console.mistral.ai/user/api-keys/). Please add this key to
   your GitHub Action secrets.
 - `OPENAI_API_ORG`: (optional) use this to use the specified organization with
   OpenAI API if you have multiple. Please add this key to your GitHub Action
   secrets.
+- `openai_base_url`: (optional) use this to specify the base url of the OpenAI compatible API. Default is https://api.openai.com/v1
+- `openai_light_model`: (optional) use this to specify the light model to use. Default is `gpt-3.5-turbo`
+- `openai_heavy_model`: (optional) use this to specify the heavy model to use. Default is `gpt-4`
 
-### Models: `gpt-4` and `gpt-3.5-turbo`
+### Models: `gpt-4` and `gpt-3.5-turbo`, or `mistral-small` and `mistral-tiny`
 
-Recommend using `gpt-3.5-turbo` for lighter tasks such as summarizing the
+Recommend using `mistral-tiny` or `mistral-small` for lighter tasks such as summarizing the
+changes (`openai_light_model` in configuration) and `mistral-small` or `mistral-medium` for more complex
+
+Cost are really cheaper than OpenAI and the results quite similar.
+
+If you want to use openai we recommend using `gpt-3.5-turbo` for lighter tasks such as summarizing the
 changes (`openai_light_model` in configuration) and `gpt-4` for more complex
 review and commenting tasks (`openai_heavy_model` in configuration).
 
@@ -216,50 +259,6 @@ $ npm run build && npm run package
 
 ## FAQs
 
-### Review pull requests from forks
-
-GitHub Actions limits the access of secrets from forked repositories. To enable
-this feature, you need to use the `pull_request_target` event instead of
-`pull_request` in your workflow file. Note that with `pull_request_target`, you
-need extra configuration to ensure checking out the right commit:
-
-```yaml
-name: Code Review
-
-permissions:
-  contents: read
-  pull-requests: write
-
-on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
-  pull_request_review_comment:
-    types: [created]
-
-concurrency:
-  group:
-    ${{ github.repository }}-${{ github.event.number || github.head_ref ||
-    github.sha }}-${{ github.workflow }}-${{ github.event_name ==
-    'pull_request_review_comment' && 'pr_comment' || 'pr' }}
-  cancel-in-progress: ${{ github.event_name != 'pull_request_review_comment' }}
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: coderabbitai/ai-pr-reviewer@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        with:
-          debug: false
-          review_simple_changes: false
-          review_comment_lgtm: false
-```
-
-See also:
-https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
-
 ### Inspect the messages between OpenAI server
 
 Set `debug: true` in the workflow file to enable debug mode, which will show the
@@ -267,11 +266,9 @@ messages
 
 ### Disclaimer
 
-- Your code (files, diff, PR title/description) will be sent to OpenAI's servers
-  for processing. Please check with your compliance team before using this on
+- Your code (files, diff, PR title/description) will be sent to your AI API's servers
+  for processing. Please check with your privacy policy before using this on
   your private code repositories.
-- OpenAI's API is used instead of ChatGPT session on their portal. OpenAI API
-  has a
-  [more conservative data usage policy](https://openai.com/policies/api-data-usage-policies)
-  compared to their ChatGPT offering.
-- This action is not affiliated with OpenAI.
+- Regarding which API you are using check OpenAI API [specific data usage policy](https://openai.com/policies/api-data-usage-policies)
+  or MistralAI API [specific data usage policy](https://mistral.ai/privacy-policy/).
+- This action is not affiliated with OpenAI or Mistral AI.

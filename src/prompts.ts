@@ -1,5 +1,10 @@
 import {type Inputs} from './inputs'
 
+/**
+ * Represents a class that provides prompts for reviewing code changes in a pull request.
+ * The Prompts class contains various prompts for summarizing, triaging, and reviewing code changes.
+ * It also includes prompts for generating summaries of changesets and responding to comments on the PR review.
+ */
 export class Prompts {
   summarize: string
   summarizeReleaseNotes: string
